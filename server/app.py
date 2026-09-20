@@ -75,67 +75,56 @@ def create_app(base_dir: Path) -> Flask:
     PROTECTED_PREFIXES = ("/", "/get_info/", "/build_status")
     PUBLIC_PREFIXES = ("/validate_token", "/logout", "/receive_data/", "/static/", "/download_apk", "/build_apk", "/download_generated_app")
 
-    @app.before_request
-    def require_auth():
-        path = request.path
-        if any(path == p or path.startswith(p) for p in PUBLIC_PREFIXES):
-            return None
-        if any(path == p or path.startswith(p) for p in PROTECTED_PREFIXES):
-            if not session.get("token_valid"):
-                if request.path.startswith("/api/"):
-                    return jsonify({"error": "Unauthorized"}), 401
-                return render_template("base.html", structure={}, unauthorized=True)
-        return None
+  import os
+from flask import Flask, request, session, redirect, render_template
 
-    @app.route("/validate_token", methods=["POST"])
-    def validate_token():
-        try:
-            data = request.get_json(silent=True) or request.form
-            token = data.get("token") if hasattr(data, "get") else (data.get("token") if isinstance(data, dict) else None)
-            if not token:
-                return jsonify({"error": "Token required"}), 400
+app = Flask(__name__)
 
-            token_server_url = os.environ.get("TOKEN_SERVER_URL", "http://localhost:8080").rstrip("/")
-            if not token_server_url:
-                return jsonify({"error": "Server misconfigured: TOKEN_SERVER_URL missing"}), 500
+app.secret_key = os.environ["FLASK_SECRET_KEY"]
+APP_TOKEN = os.environ["APP_TOKEN"]
 
-            ini = load_ini(Path(__file__).resolve().parent.parent / "choices.ini")
-            remote_url = ini.get("behavior", "remote_url", fallback=request.host_url)
 
-            try:
-                resp = requests.post(
-                    f"{token_server_url}/api/v1/token/validate",
-                    json={"token": token, "tool": "LurkerX", "remote_url": remote_url},
-                    timeout=15,
-                )
-            except requests.RequestException as exc:
-                print(f"[validate_token] validator unreachable: {exc}")
-                traceback.print_exc()
-                return jsonify({"error": "Validator unreachable"}), 502
+@app.before_request
+def require_auth():
+    public_paths = ["/login", "/logout", "/static/"]
 
-            try:
-                payload = resp.json()
-            except Exception:
-                return jsonify({"error": "Invalid validator response"}), 502
+    if any(request.path.startswith(path) for path in public_paths):
+        return
 
-            if resp.status_code != 200 or not payload.get("valid"):
-                reason = payload.get("error") or payload.get("message") or "Invalid or expired token"
-                return jsonify({"error": reason}), 401
+    if not session.get("authenticated"):
+        return redirect("/login")
 
-            session["token_valid"] = True
-            max_age = _token_expiry_seconds(token) or (60 * 60 * 24 * 30)
-            result = make_response(jsonify({"status": "ok"}))
-            result.set_cookie("lurkerx_token", token, max_age=max_age, httponly=True, samesite="Lax")
-            return result
-        except Exception as e:
-            return jsonify({"error": f"Server error: {e}"}), 500
 
-    @app.route("/logout", methods=["POST"])
-    def logout():
-        session.pop("token_valid", None)
-        resp = make_response(jsonify({"status": "ok"}))
-        resp.set_cookie("lurkerx_token", "", expires=0)
-        return resp
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        token = request.form.get("token", "")
+
+        if token == APP_TOKEN:
+            session["authenticated"] = True
+            return redirect("/")
+
+        return render_template("login.html", error="Invalid token")
+
+    return render_template("login.html", error=None)
+
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect("/login")
+
+
+@app.route("/")
+def home():
+    return "Authenticated successfully!"
+
+
+if __name__ == "__main__":
+    app.run(
+        host="0.0.0.0",
+        port=int(os.environ.get("PORT", 5000))
+    )
 
     @app.route("/receive_data/<item>", methods=["POST"])
     def receive_data(item):
